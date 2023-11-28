@@ -1,11 +1,9 @@
-import asyncio
 import os
 import re
 from getpass import getpass
 from os import makedirs
 from typing import Any, Dict, Tuple
 
-import aiofiles
 import appdirs
 import yaml
 
@@ -16,20 +14,20 @@ class InvalidMatrixIdException(Exception):
     pass
 
 
-def write_user_data(data: dict, filename: str) -> None:
+def write_user_data(data: Dict[str, Any], filename: str) -> None:
     """
     Write data to yaml file <filename> in user's appdir (ie ~/.local/share/fractal)
     """
     makedirs(data_dir, exist_ok=True)
 
     try:
-        data = yaml.dump(data)
+        data_to_write = yaml.dump(data)
     except yaml.YAMLError as error:
         raise error
 
     user_data = os.path.join(data_dir, filename)
     with open(user_data, "w") as file:
-        file.write(data)
+        file.write(data_to_write)
 
 
 def read_user_data(filename: str) -> Tuple[Dict[str, Any], str]:

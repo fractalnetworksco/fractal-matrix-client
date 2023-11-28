@@ -2,9 +2,8 @@ import logging
 import os
 from typing import Optional
 
-from fractal.utils import parse_matrix_id
-
 from .async_client import FractalAsyncClient
+from .utils import parse_matrix_id
 
 logger = logging.getLogger(__file__)
 
