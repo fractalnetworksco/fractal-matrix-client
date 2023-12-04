@@ -3,9 +3,9 @@ from sys import exit
 from typing import Optional, Tuple
 
 from asgiref.sync import async_to_sync
-from clicz import cli_method
-from fractal import MatrixClient, get_homeserver_for_matrix_id  # move to utils?
-from fractal.utils import prompt_matrix_password, read_user_data, write_user_data
+from fractal.cli import cli_method
+from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id  # move to utils?
+from fractal.matrix.utils import prompt_matrix_password, read_user_data, write_user_data
 from nio import LoginError
 
 

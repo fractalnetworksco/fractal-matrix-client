@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "fractal-matrix"
+name = "fractal-matrix-client"
 version = "0.1.0"
 description = ""
 authors = ["Mo Balaa <balaa@fractalnetworks.co>"]
@@ -18,3 +18,6 @@ PyYAML = "^6.0.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.plugins."fractal.plugins"]
+"login" = "fractal.matrix.controllers.login"
