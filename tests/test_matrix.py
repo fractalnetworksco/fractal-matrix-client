@@ -2,7 +2,7 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fractal import (
+from fractal.matrix import (
     MatrixClient,
     UnknownDiscoveryInfoException,
     WellKnownNotFoundException,
