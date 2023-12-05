@@ -2,8 +2,9 @@ import logging
 import os
 from typing import Optional
 
+from fractal.cli.utils import parse_matrix_id
+
 from .async_client import FractalAsyncClient
-from .utils import parse_matrix_id
 
 logger = logging.getLogger(__file__)
 
@@ -24,6 +25,8 @@ class InvalidMatrixIdException(Exception):
 
 async def get_homeserver_for_matrix_id(matrix_id: str):
     """Lookup the homeserver url associated with a Matrix ID"""
+    # FIXME: just because matrix_id has localhost, doesn't necessarily mean
+    # that the homeserver is running on localhost. Could be synapse:8008, etc.
     if "localhost" in matrix_id:
         return "http://localhost:8008"
     _, homeserver_host = parse_matrix_id(matrix_id)

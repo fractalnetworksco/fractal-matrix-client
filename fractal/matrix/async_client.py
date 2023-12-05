@@ -5,8 +5,12 @@ from typing import Any, Dict, List, Optional, Union
 from nio import (
     AsyncClient,
     AsyncClientConfig,
+    JoinError,
     MessageDirection,
+    RoomGetStateEventError,
+    RoomInviteError,
     RoomMessagesError,
+    RoomPutStateError,
     RoomSendResponse,
 )
 
@@ -84,3 +88,44 @@ class FractalAsyncClient(AsyncClient):
         if not isinstance(res, RoomMessagesError):
             return res.start
         raise GetLatestSyncTokenError(self.room_id)
+
+    async def invite(self, user_id: str, room_id: str) -> None:
+        """
+        Invites a user to a room and sets their power level to 100.
+        FIXME: setting power level to 100 is required for Fractal Database.
+
+        Args:
+            user_id (str): The user id to invite to the room.
+            room_id (str): The room id to invite the user to.
+        """
+        logger.info(f"Sending invite to {room_id} to user ({user_id})")
+        res = await self.room_invite(room_id, user_id)
+        if isinstance(res, RoomInviteError):
+            raise Exception(res.message)
+
+        # get power levels
+        res = await self.room_get_state_event(room_id, "m.room.power_levels")
+        if isinstance(res, RoomGetStateEventError):
+            raise Exception(res.message)
+
+        # set user as admin
+        power_levels = res.content
+        power_levels["users"][user_id] = 100
+        res = await self.room_put_state(room_id, "m.room.power_levels", power_levels)
+        if isinstance(res, RoomPutStateError):
+            raise Exception(res.message)
+
+        return None
+
+    async def join_room(self, room_id: str) -> None:
+        """
+        Joins a room.
+
+        Args:
+            room_id (str): The room id to join.
+        """
+        logger.info(f"Joining room: {room_id}")
+        res = await self.join(room_id)
+        if isinstance(res, JoinError):
+            raise Exception(res.message)
+        return None

@@ -4,8 +4,8 @@ from typing import Optional, Tuple
 
 from asgiref.sync import async_to_sync
 from fractal.cli import cli_method
+from fractal.cli.utils import prompt_matrix_password, read_user_data, write_user_data
 from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id  # move to utils?
-from fractal.matrix.utils import prompt_matrix_password, read_user_data, write_user_data
 from nio import LoginError
 
 
@@ -15,6 +15,7 @@ class MatrixLoginError(Exception):
 
 class LoginController:
     PLUGIN_NAME = "login"
+    TOKEN_FILE = "matrix.creds.yaml"
 
     @cli_method
     def login(self, matrix_id: str):
@@ -29,7 +30,7 @@ class LoginController:
 
         # save access token to token file
         write_user_data(
-            {"access_token": access_token, "homeserver_url": homeserver_url}, "matrix"
+            {"access_token": access_token, "homeserver_url": homeserver_url}, self.TOKEN_FILE
         )
 
         print(f"Successfully logged in as {matrix_id}")
@@ -44,7 +45,7 @@ class LoginController:
         Args:
         """
         try:
-            data, path = read_user_data("matrix")
+            data, path = read_user_data(self.TOKEN_FILE)
             access_token = data["access_token"]
             homeserver_url = data["homeserver_url"]
         except KeyError:
