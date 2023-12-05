@@ -4,8 +4,12 @@ from typing import Optional, Tuple
 
 from asgiref.sync import async_to_sync
 from fractal.cli import cli_method
-from fractal.cli.utils import prompt_matrix_password, read_user_data, write_user_data
-from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id  # move to utils?
+from fractal.cli.utils import read_user_data, write_user_data
+from fractal.matrix import (
+    MatrixClient,
+    get_homeserver_for_matrix_id,
+    prompt_matrix_password,
+)
 from nio import LoginError
 
 
@@ -13,8 +17,8 @@ class MatrixLoginError(Exception):
     pass
 
 
-class LoginController:
-    PLUGIN_NAME = "login"
+class AuthController:
+    PLUGIN_NAME = "auth"
     TOKEN_FILE = "matrix.creds.yaml"
 
     @cli_method
@@ -30,7 +34,12 @@ class LoginController:
 
         # save access token to token file
         write_user_data(
-            {"access_token": access_token, "homeserver_url": homeserver_url}, self.TOKEN_FILE
+            {
+                "access_token": access_token,
+                "homeserver_url": homeserver_url,
+                "matrix_id": matrix_id,
+            },
+            self.TOKEN_FILE,
         )
 
         print(f"Successfully logged in as {matrix_id}")
@@ -73,5 +82,39 @@ class LoginController:
                 raise MatrixLoginError(res.message)
         return homeserver_url, res.access_token
 
+    @cli_method
+    def show(self, key: str):
+        """
 
-Controller = LoginController
+        ---
+        Args:
+            key: Key to show. Such as 'access_token' or 'homeserver_url'.
+        """
+        try:
+            data, _ = read_user_data(self.TOKEN_FILE)
+        except KeyError:
+            raise
+
+        match key:
+            case "access_token":
+                print(data["access_token"])
+            case "homeserver_url":
+                print(data["homeserver_url"])
+            case "matrix_id":
+                print(data["matrix_id"])
+
+    async def _login_with_password(
+        self, matrix_id: str, password: Optional[str] = None
+    ) -> Tuple[str, str]:
+        homeserver_url = await get_homeserver_for_matrix_id(matrix_id)
+        if not password:
+            password = prompt_matrix_password(matrix_id)
+        async with MatrixClient(homeserver_url) as client:
+            client.user = matrix_id
+            res = await client.login(password)
+            if isinstance(res, LoginError):
+                raise MatrixLoginError(res.message)
+        return homeserver_url, res.access_token
+
+
+Controller = AuthController

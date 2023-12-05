@@ -14,10 +14,12 @@ matrix-nio = "^0.22.1"
 sh = "^2.0.6"
 aiofiles = "^23.1.0"
 PyYAML = "^6.0.1"
+docker = "^6.1.3"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.plugins."fractal.plugins"]
-"login" = "fractal.matrix.controllers.login"
+"auth" = "fractal.matrix.controllers.login"
+"register" = "fractal.matrix.controllers.registration"

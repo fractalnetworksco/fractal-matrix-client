@@ -2,17 +2,21 @@ import logging
 import os
 from typing import Any, Dict, List, Optional, Union
 
+import aiohttp
+from fractal.matrix import parse_matrix_id
 from nio import (
     AsyncClient,
     AsyncClientConfig,
     JoinError,
     MessageDirection,
+    RegisterResponse,
     RoomGetStateEventError,
     RoomInviteError,
     RoomMessagesError,
     RoomPutStateError,
     RoomSendResponse,
 )
+from nio.responses import RegisterErrorResponse
 
 from .exceptions import GetLatestSyncTokenError
 
@@ -89,7 +93,7 @@ class FractalAsyncClient(AsyncClient):
             return res.start
         raise GetLatestSyncTokenError(self.room_id)
 
-    async def invite(self, user_id: str, room_id: str) -> None:
+    async def invite(self, user_id: str, room_id: str, admin: bool = False) -> None:
         """
         Invites a user to a room and sets their power level to 100.
         FIXME: setting power level to 100 is required for Fractal Database.
@@ -97,7 +101,11 @@ class FractalAsyncClient(AsyncClient):
         Args:
             user_id (str): The user id to invite to the room.
             room_id (str): The room id to invite the user to.
+            admin (bool): Whether or not to set the user as an admin. FIXME: Only admin invites are supported for now.
         """
+        if not admin:
+            raise Exception("FIXME: Only admin invites are supported for now.")
+
         logger.info(f"Sending invite to {room_id} to user ({user_id})")
         res = await self.room_invite(room_id, user_id)
         if isinstance(res, RoomInviteError):
@@ -129,3 +137,84 @@ class FractalAsyncClient(AsyncClient):
         if isinstance(res, JoinError):
             raise Exception(res.message)
         return None
+
+    async def disable_ratelimiting(self, matrix_id: str) -> None:
+        """
+        Disables rate limiting for a user.
+
+        Args:
+            matrix_id (str): The matrix id to disable rate limiting for.
+        """
+        url = f"{self.homeserver}/_synapse/admin/v1/users/{matrix_id}/override_ratelimit"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+
+        logger.info(f"Disabling rate limiting for user: {matrix_id}")
+        async with aiohttp.ClientSession() as session:
+            # TODO: Maybe not completely disable rate limiting?
+            # what is optimial for Fractal Database?
+            async with session.post(url, json={}, headers=headers) as response:
+                if response.ok:
+                    logger.info("Rate limit override successful.")
+                    return None
+                else:
+                    txt = await response.text()
+                    raise Exception(
+                        f"Failed to override rate limit. Error Response status {response.status}: {txt}"
+                    )
+
+    async def generate_registration_token(self) -> str:
+        """
+
+
+        Args:
+            matrix_id (str): The matrix id to disable rate limiting for.
+        """
+        url = f"{self.homeserver}/_synapse/admin/v1/registration_tokens/new"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+
+        async with aiohttp.ClientSession() as session:
+            # TODO: Maybe not completely disable rate limiting?
+            # what is optimial for Fractal Database?
+            async with session.post(url, json={}, headers=headers) as response:
+                if response.ok:
+                    data = await response.json()
+                    return data["token"]
+                else:
+                    txt = await response.text()
+                    logger.error(
+                        f"Failed to override rate limit. Error Response status {response.status}: {txt}"
+                    )
+                    raise Exception()
+
+    async def register_with_token(
+        self,
+        matrix_id: str,
+        password: str,
+        registration_token: str,
+        device_name: str = "",
+        disable_ratelimiting: bool = True,
+    ) -> None:
+        """
+        Registers a user with a registration token.
+
+        Args:
+            username (str): The username to register.
+            password (str): The password to register.
+            registration_token (str): The registration token to use.
+            device_name (str): The device name to register. Defaults to "".
+            disable_ratelimiting (bool): Whether or not to disable rate limiting for the user. Defaults to True.
+        """
+        username = parse_matrix_id(matrix_id)[0]
+        access_token = self.access_token
+        res = await super().register_with_token(
+            username, password, registration_token, device_name=device_name
+        )
+        if isinstance(res, RegisterErrorResponse):
+            raise Exception(res.message)
+
+        # register will replace the access token that's on the client with the one returned
+        # from a successful registration. We want to keep the original access token.
+        self.access_token = access_token
+
+        if disable_ratelimiting:
+            await self.disable_ratelimiting(matrix_id)

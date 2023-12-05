@@ -1,10 +1,8 @@
 import logging
 import os
-from typing import Optional
-
-from fractal.cli.utils import parse_matrix_id
-
-from .async_client import FractalAsyncClient
+import re
+from getpass import getpass
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__file__)
 
@@ -21,6 +19,36 @@ class UnknownDiscoveryInfoException(Exception):
 
 class InvalidMatrixIdException(Exception):
     pass
+
+
+def prompt_matrix_password(matrix_id: str) -> str:
+    """
+    Prompts for Matrix password.
+
+    Args:
+        matrix_id: Matrix ID to prompt for
+
+    TODO: This should instead direct to a homeserver login page.
+    """
+    print(f"Login with Matrix ID ({matrix_id}) to continue")
+    try:
+        password = getpass(f"{matrix_id}'s password: ")
+        return password
+    except (KeyboardInterrupt, EOFError):
+        # newline after ^C
+        print()
+        exit(1)
+
+
+def parse_matrix_id(matrix_id: str) -> Tuple[str, str]:
+    """Parse local part and homeserver from MatrixID"""
+    pattern = re.compile(r"^@([^:]+):([^:]+)$")
+    match = pattern.match(matrix_id)
+    if not match:
+        raise InvalidMatrixIdException(f"{matrix_id} is not a valid Matrix ID.")
+    user_localpart = match.group(1)
+    homeserver = match.group(2)
+    return (user_localpart, homeserver)
 
 
 async def get_homeserver_for_matrix_id(matrix_id: str):
@@ -70,6 +98,8 @@ class MatrixClient:
         room_id: Optional[str] = None,
         max_timeouts: int = 2,
     ):
+        from fractal.matrix.async_client import FractalAsyncClient
+
         try:
             self.homeserver_url = homeserver_url or os.environ["MATRIX_HOMESERVER_URL"]
             self.client = FractalAsyncClient(
