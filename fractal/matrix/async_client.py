@@ -34,7 +34,7 @@ class FractalAsyncClient(AsyncClient):
         **kwargs,
     ):
         super().__init__(homeserver_url, *args, **kwargs)
-        self.config = AsyncClientConfig(max_timeouts=max_timeouts)
+        self.config = AsyncClientConfig(max_timeouts=max_timeouts, request_timeout=5)
         self.access_token = access_token
         self.room_id: Optional[str] = room_id
 

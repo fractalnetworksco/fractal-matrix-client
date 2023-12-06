@@ -63,13 +63,18 @@ class AuthController:
             homeserver_url = data["homeserver_url"]
         except KeyError:
             raise
+        except FileNotFoundError:
+            print("You are not logged in.")
+            return
 
         async def _logout():
             async with MatrixClient(homeserver_url, access_token) as client:
                 await client.logout()
 
-        os.remove(path)
-        print("Successfully logged out. Have a nice day.")
+        if os.path.exists(path):
+            os.remove(path)
+            async_to_sync(_logout)()
+            print("Successfully logged out. Have a nice day.")
 
     logout.clicz_aliases = ["logout"]
 

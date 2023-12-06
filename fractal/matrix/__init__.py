@@ -96,7 +96,7 @@ class MatrixClient:
         homeserver_url: Optional[str] = None,
         access_token: str = os.environ.get("HS_ACCESS_TOKEN", ""),
         room_id: Optional[str] = None,
-        max_timeouts: int = 2,
+        max_timeouts: int = 0,
     ):
         from fractal.matrix.async_client import FractalAsyncClient
 
