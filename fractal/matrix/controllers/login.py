@@ -22,15 +22,19 @@ class AuthController:
     TOKEN_FILE = "matrix.creds.yaml"
 
     @cli_method
-    def login(self, matrix_id: str):
+    def login(self, matrix_id: str, homeserver_url: Optional[str] = None):
         """
         Login to a Matrix homeserver.
         ---
         Args:
             matrix_id: Matrix ID of user to login as
+            homeserver_url: Homeserver to login to
+
         """
 
-        homeserver_url, access_token = async_to_sync(self._login_with_password)(matrix_id)
+        homeserver_url, access_token = async_to_sync(self._login_with_password)(
+            matrix_id, homeserver_url=homeserver_url
+        )
 
         # save access token to token file
         write_user_data(
@@ -70,9 +74,10 @@ class AuthController:
     logout.clicz_aliases = ["logout"]
 
     async def _login_with_password(
-        self, matrix_id: str, password: Optional[str] = None
+        self, matrix_id: str, password: Optional[str] = None, homeserver_url: Optional[str] = None
     ) -> Tuple[str, str]:
-        homeserver_url = await get_homeserver_for_matrix_id(matrix_id)
+        if not homeserver_url:
+            homeserver_url = await get_homeserver_for_matrix_id(matrix_id)
         if not password:
             password = prompt_matrix_password(matrix_id)
         async with MatrixClient(homeserver_url) as client:
@@ -102,19 +107,6 @@ class AuthController:
                 print(data["homeserver_url"])
             case "matrix_id":
                 print(data["matrix_id"])
-
-    async def _login_with_password(
-        self, matrix_id: str, password: Optional[str] = None
-    ) -> Tuple[str, str]:
-        homeserver_url = await get_homeserver_for_matrix_id(matrix_id)
-        if not password:
-            password = prompt_matrix_password(matrix_id)
-        async with MatrixClient(homeserver_url) as client:
-            client.user = matrix_id
-            res = await client.login(password)
-            if isinstance(res, LoginError):
-                raise MatrixLoginError(res.message)
-        return homeserver_url, res.access_token
 
 
 Controller = AuthController

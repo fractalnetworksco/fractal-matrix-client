@@ -193,7 +193,7 @@ class FractalAsyncClient(AsyncClient):
         registration_token: str,
         device_name: str = "",
         disable_ratelimiting: bool = True,
-    ) -> None:
+    ) -> str:
         """
         Registers a user with a registration token.
 
@@ -218,3 +218,5 @@ class FractalAsyncClient(AsyncClient):
 
         if disable_ratelimiting:
             await self.disable_ratelimiting(matrix_id)
+
+        return res.access_token

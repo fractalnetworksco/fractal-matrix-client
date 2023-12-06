@@ -1,6 +1,6 @@
 import asyncio
 from sys import exit
-from typing import Tuple
+from typing import Optional, Tuple
 
 import docker
 from docker.models.containers import Container
@@ -45,20 +45,31 @@ class RegistrationController(AuthenticatedController):
         return access_token, homeserver_url
 
     async def _register(
-        self, matrix_id: str, password: str, registration_token: str, local: bool = False
+        self,
+        matrix_id: str,
+        password: str,
+        registration_token: str,
+        local: bool = False,
+        homeserver_url: Optional[str] = None,
     ) -> Tuple[str, str]:
         if local:
             return await self._register_local(matrix_id, password)
-
-        homeserver_url = await get_homeserver_for_matrix_id(matrix_id)
+        if not homeserver_url:
+            homeserver_url = await get_homeserver_for_matrix_id(matrix_id)
         async with MatrixClient(homeserver_url, access_token=self.access_token) as client:  # type: ignore
-            await client.register_with_token(matrix_id, password, registration_token)
-            access_token = client.access_token
+            access_token = await client.register_with_token(
+                matrix_id, password, registration_token
+            )
         return access_token, homeserver_url
 
     @cli_method
     def register(
-        self, matrix_id: str, password: str, registration_token: str, local: bool = False
+        self,
+        matrix_id: str,
+        password: str,
+        registration_token: str,
+        homeserver_url: Optional[str] = None,
+        local: bool = False,
     ):
         """
         Registers a given user with a homeserver. Prints out the registered
@@ -68,10 +79,18 @@ class RegistrationController(AuthenticatedController):
             matrix_id: Matrix ID of user to register.
             password: Password to register with.
             registration_token: Registration token to use.
+            homeserver_url: Homeserver to register with.
             local: Whether to register locally or not.
+
         """
         access_token, homeserver_url = asyncio.run(
-            self._register(matrix_id, password, registration_token, local=local)
+            self._register(
+                matrix_id,
+                password,
+                registration_token,
+                homeserver_url=homeserver_url,
+                local=local,
+            )
         )
         print(access_token)
 
