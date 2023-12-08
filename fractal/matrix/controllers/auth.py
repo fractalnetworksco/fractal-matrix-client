@@ -5,11 +5,8 @@ from typing import Optional, Tuple
 from asgiref.sync import async_to_sync
 from fractal.cli import cli_method
 from fractal.cli.utils import read_user_data, write_user_data
-from fractal.matrix import (
-    MatrixClient,
-    get_homeserver_for_matrix_id,
-    prompt_matrix_password,
-)
+from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id
+from fractal.matrix.utils import prompt_matrix_password
 from nio import LoginError
 
 

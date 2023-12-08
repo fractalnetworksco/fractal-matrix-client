@@ -6,7 +6,8 @@ import docker
 from docker.models.containers import Container
 from fractal.cli import cli_method
 from fractal.cli.controllers.authenticated import AuthenticatedController
-from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id, parse_matrix_id
+from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id
+from fractal.matrix.utils import parse_matrix_id
 
 
 class RegistrationController(AuthenticatedController):

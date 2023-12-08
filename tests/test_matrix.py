@@ -2,11 +2,10 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fractal.matrix import (
-    MatrixClient,
+from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id
+from fractal.matrix.exceptions import (
     UnknownDiscoveryInfoException,
     WellKnownNotFoundException,
-    get_homeserver_for_matrix_id,
 )
 from nio import AsyncClient, DiscoveryInfoResponse
 from nio.http import TransportResponse
