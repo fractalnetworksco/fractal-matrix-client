@@ -1,3 +1,10 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**' # This will run the workflow on every push to any branch
+
 jobs:
   # build_and_test:
   #   runs-on: ubuntu-latest
@@ -27,3 +34,4 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
