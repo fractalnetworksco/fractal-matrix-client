@@ -1,8 +1,11 @@
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import aiohttp
+from aiofiles import open as aiofiles_open
+from aiofiles import os as aiofiles_os
+from fractal.matrix.utils import parse_matrix_id
 from nio import (
     AsyncClient,
     AsyncClientConfig,
@@ -14,10 +17,9 @@ from nio import (
     RoomMessagesError,
     RoomPutStateError,
     RoomSendResponse,
+    UploadError,
 )
 from nio.responses import RegisterErrorResponse
-
-from fractal.matrix.utils import parse_matrix_id
 
 from .exceptions import GetLatestSyncTokenError
 
@@ -221,6 +223,29 @@ class FractalAsyncClient(AsyncClient):
             await self.disable_ratelimiting(matrix_id)
 
         return res.access_token
+
+    async def upload_file(
+        self, file_path: str, monitor_func: Optional[Callable[[str, str], None]]
+    ) -> str:
+        """
+        Uploads a file to the homeserver.
+
+        Args:
+            file_path (str): The path to the file to upload.
+
+        Returns:
+            str: The content uri of the uploaded file.
+        """
+        file_stat = await aiofiles_os.stat(file_path)
+        logger.info(f"Uploading file: {file_path}")
+        async with aiofiles_open(file_path, "r+b") as f:
+            if monitor_func:
+                res, _ = await self.upload(f, filesize=file_stat.st_size, monitor=monitor_func)
+            else:
+                res, _ = await self.upload(f, filesize=file_stat.st_size)
+        if isinstance(res, UploadError):
+            raise Exception("Failed to upload file.")
+        return res.content_uri
 
 
 class MatrixClient:
