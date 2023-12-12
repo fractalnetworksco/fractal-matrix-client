@@ -3,7 +3,6 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
-from fractal.matrix.utils import parse_matrix_id
 from nio import (
     AsyncClient,
     AsyncClientConfig,
@@ -17,6 +16,8 @@ from nio import (
     RoomSendResponse,
 )
 from nio.responses import RegisterErrorResponse
+
+from fractal.matrix.utils import parse_matrix_id
 
 from .exceptions import GetLatestSyncTokenError
 
@@ -248,21 +249,22 @@ class MatrixClient:
     def __init__(
         self,
         homeserver_url: Optional[str] = None,
-        access_token: str = os.environ.get("HS_ACCESS_TOKEN", ""),
+        access_token: Optional[str] = None,
+        matrix_id: Optional[str] = None,
         room_id: Optional[str] = None,
         max_timeouts: int = 0,
     ):
-        try:
-            self.homeserver_url = homeserver_url or os.environ["MATRIX_HOMESERVER_URL"]
-            self.client = FractalAsyncClient(
-                self.homeserver_url, access_token, room_id=room_id, max_timeouts=max_timeouts
+        self.homeserver_url = homeserver_url or os.environ.get("MATRIX_HOMESERVER_URL")
+        self.matrix_id = matrix_id or os.environ.get("MATRIX_ID")
+        self.access_token = access_token or os.environ.get("MATRIX_ACCESS_TOKEN")
+        self.room_id = room_id
+        self.max_timeouts = max_timeouts
+
+        if not self.homeserver_url and not self.matrix_id:
+            raise KeyError(
+                "Environment variable MATRIX_HOMESERVER_URL or MATRIX_ID must be set if\
+    not passed explicitly to the MatrixClient context manager decorator."
             )
-        except KeyError as e:
-            if e.args[0] == "MATRIX_HOMESERVER_URL":
-                raise KeyError(
-                    "Environment variable MATRIX_HOMESERVER_URL must be set if\
- not passed explicitly to the MatrixClient context manager decorator."
-                ) from e
 
     def __call__(self, func):
         async def wrapper(*args, **kwargs):
@@ -272,6 +274,16 @@ class MatrixClient:
         return wrapper
 
     async def __aenter__(self):
+        if not self.homeserver_url:
+            self.homeserver_url = await get_homeserver_for_matrix_id(self.matrix_id)
+        self.client = FractalAsyncClient(
+            self.homeserver_url,
+            self.access_token,
+            room_id=self.room_id,
+            max_timeouts=self.max_timeouts,
+        )
+        if not self.access_token and self.matrix_id:
+            self.client.user = self.matrix_id
         return self.client
 
     async def __aexit__(self, exc_type, exc_value, traceback):
