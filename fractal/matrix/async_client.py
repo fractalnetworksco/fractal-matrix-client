@@ -11,12 +11,12 @@ from nio import (
     AsyncClientConfig,
     JoinError,
     MessageDirection,
-    RegisterResponse,
     RoomGetStateEventError,
     RoomInviteError,
     RoomMessagesError,
     RoomPutStateError,
     RoomSendResponse,
+    TransferMonitor,
     UploadError,
 )
 from nio.responses import RegisterErrorResponse
@@ -225,13 +225,16 @@ class FractalAsyncClient(AsyncClient):
         return res.access_token
 
     async def upload_file(
-        self, file_path: str, monitor_func: Optional[Callable[[str, str], None]]
+        self,
+        file_path: str,
+        monitor: Optional[TransferMonitor] = None,
     ) -> str:
         """
         Uploads a file to the homeserver.
 
         Args:
             file_path (str): The path to the file to upload.
+            monitor (Optional[TransferMonitor]): A transfer monitor to use. Defaults to None.
 
         Returns:
             str: The content uri of the uploaded file.
@@ -239,8 +242,8 @@ class FractalAsyncClient(AsyncClient):
         file_stat = await aiofiles_os.stat(file_path)
         logger.info(f"Uploading file: {file_path}")
         async with aiofiles_open(file_path, "r+b") as f:
-            if monitor_func:
-                res, _ = await self.upload(f, filesize=file_stat.st_size, monitor=monitor_func)
+            if monitor:
+                res, _ = await self.upload(f, filesize=file_stat.st_size, monitor=monitor)
             else:
                 res, _ = await self.upload(f, filesize=file_stat.st_size)
         if isinstance(res, UploadError):
