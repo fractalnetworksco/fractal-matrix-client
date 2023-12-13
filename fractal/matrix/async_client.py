@@ -228,6 +228,7 @@ class FractalAsyncClient(AsyncClient):
         self,
         file_path: str,
         monitor: Optional[TransferMonitor] = None,
+        filename: Optional[str] = None,
     ) -> str:
         """
         Uploads a file to the homeserver.
@@ -243,9 +244,11 @@ class FractalAsyncClient(AsyncClient):
         logger.info(f"Uploading file: {file_path}")
         async with aiofiles_open(file_path, "r+b") as f:
             if monitor:
-                res, _ = await self.upload(f, filesize=file_stat.st_size, monitor=monitor)
+                res, _ = await self.upload(
+                    f, filesize=file_stat.st_size, monitor=monitor, filename=filename
+                )
             else:
-                res, _ = await self.upload(f, filesize=file_stat.st_size)
+                res, _ = await self.upload(f, filesize=file_stat.st_size, filename=filename)
         if isinstance(res, UploadError):
             raise Exception("Failed to upload file.")
         return res.content_uri
