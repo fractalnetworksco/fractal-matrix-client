@@ -94,7 +94,7 @@ class FractalAsyncClient(AsyncClient):
         )
         if not isinstance(res, RoomMessagesError):
             return res.start
-        raise GetLatestSyncTokenError(self.room_id)
+        raise GetLatestSyncTokenError(res.message)
 
     async def invite(self, user_id: str, room_id: str, admin: bool = False) -> None:
         """
