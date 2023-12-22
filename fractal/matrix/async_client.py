@@ -167,8 +167,6 @@ class FractalAsyncClient(AsyncClient):
 
     async def generate_registration_token(self) -> str:
         """
-
-
         Args:
             matrix_id (str): The matrix id to disable rate limiting for.
         """
@@ -207,6 +205,7 @@ class FractalAsyncClient(AsyncClient):
             device_name (str): The device name to register. Defaults to "".
             disable_ratelimiting (bool): Whether or not to disable rate limiting for the user. Defaults to True.
         """
+        matrix_id = matrix_id.lower()
         username = parse_matrix_id(matrix_id)[0]
         access_token = self.access_token
         res = await super().register_with_token(
