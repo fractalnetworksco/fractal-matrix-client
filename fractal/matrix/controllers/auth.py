@@ -7,7 +7,7 @@ from fractal.cli import cli_method
 from fractal.cli.utils import read_user_data, write_user_data
 from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id
 from fractal.matrix.utils import prompt_matrix_password
-from nio import LoginError
+from nio import LoginError, WhoamiError
 
 
 class MatrixLoginError(Exception):
@@ -19,19 +19,35 @@ class AuthController:
     TOKEN_FILE = "matrix.creds.yaml"
 
     @cli_method
-    def login(self, matrix_id: str, homeserver_url: Optional[str] = None):
+    def login(
+        self,
+        matrix_id: Optional[str] = None,
+        homeserver_url: Optional[str] = None,
+        access_token: Optional[str] = None,
+    ):
         """
         Login to a Matrix homeserver.
         ---
         Args:
             matrix_id: Matrix ID of user to login as
             homeserver_url: Homeserver to login to
+            access_token: Access token to use for login.
 
         """
-
-        homeserver_url, access_token = async_to_sync(self._login_with_password)(
-            matrix_id, homeserver_url=homeserver_url
-        )
+        if not access_token:
+            if not matrix_id:
+                print("Please provide a matrix ID.")
+                exit(1)
+            homeserver_url, access_token = async_to_sync(self._login_with_password)(
+                matrix_id, homeserver_url=homeserver_url
+            )
+        else:
+            if not homeserver_url:
+                print("Please provide a --homeserver-url if logging in with an access token.")
+                exit(1)
+            matrix_id, homeserver_url, access_token = async_to_sync(
+                self._login_with_access_token
+            )(access_token, homeserver_url=homeserver_url)
 
         # save access token to token file
         write_user_data(
@@ -46,6 +62,28 @@ class AuthController:
         print(f"Successfully logged in as {matrix_id}")
 
     login.clicz_aliases = ["login"]
+
+    @cli_method
+    def whoami(self):
+        """
+        Get information about the current logged in user.
+        ---
+        Args:
+        """
+        try:
+            data, _ = read_user_data(self.TOKEN_FILE)
+        except (KeyError, FileNotFoundError):
+            print("You are not logged in.")
+            exit(1)
+
+        try:
+            homeserver_url = data["homeserver_url"]
+            matrix_id = data["matrix_id"]
+        except KeyError:
+            print("You are not logged in.")
+            exit(1)
+
+        print(f"You are logged in as {matrix_id} on {homeserver_url}")
 
     @cli_method
     def logout(self):
@@ -74,6 +112,16 @@ class AuthController:
             print("Successfully logged out. Have a nice day.")
 
     logout.clicz_aliases = ["logout"]
+
+    async def _login_with_access_token(
+        self, access_token: str, homeserver_url: str
+    ) -> Tuple[str, str, str]:
+        async with MatrixClient(homeserver_url, access_token) as client:
+            res = await client.whoami()
+            if isinstance(res, WhoamiError):
+                raise MatrixLoginError(res.message)
+            matrix_id = res.user_id
+        return matrix_id, homeserver_url, access_token
 
     async def _login_with_password(
         self, matrix_id: str, password: Optional[str] = None, homeserver_url: Optional[str] = None

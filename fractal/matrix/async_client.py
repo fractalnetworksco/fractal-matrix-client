@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
 from aiofiles import open as aiofiles_open
@@ -21,7 +21,11 @@ from nio import (
 )
 from nio.responses import RegisterErrorResponse
 
-from .exceptions import GetLatestSyncTokenError
+from .exceptions import (
+    GetLatestSyncTokenError,
+    UnknownDiscoveryInfoException,
+    WellKnownNotFoundException,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -292,7 +296,7 @@ class MatrixClient:
 
         if not self.homeserver_url and not self.matrix_id:
             raise KeyError(
-                "Environment variable MATRIX_HOMESERVER_URL or MATRIX_ID must be set if\
+                "Environment variable MATRIX_HOMESERVER_URL and MATRIX_ID must be set if\
     not passed explicitly to the MatrixClient context manager decorator."
             )
 
@@ -320,7 +324,7 @@ class MatrixClient:
         await self.client.close()
 
 
-async def get_homeserver_for_matrix_id(matrix_id: str):
+async def get_homeserver_for_matrix_id(matrix_id: str) -> str:
     """Lookup the homeserver url associated with a Matrix ID"""
     # FIXME: just because matrix_id has localhost, doesn't necessarily mean
     # that the homeserver is running on localhost. Could be synapse:8008, etc.
@@ -333,5 +337,5 @@ async def get_homeserver_for_matrix_id(matrix_id: str):
     if not res.transport_response.ok:  # type: ignore
         if res.transport_response.reason == "Not Found":  # type: ignore
             raise WellKnownNotFoundException()  # type: ignore
-        raise UnknownDiscoveryInfoException(f"Failed to get homeserver for MatrixID: {res.transport_response.reason}")  # type: ignore
+        raise UnknownDiscoveryInfoException(res.transport_response.reason)  # type: ignore
     return res.homeserver_url  # type: ignore
