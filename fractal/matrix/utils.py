@@ -1,8 +1,23 @@
 import re
 from getpass import getpass
-from typing import Tuple
+from typing import Any, Tuple
+from uuid import uuid4
 
 from fractal.matrix.exceptions import InvalidMatrixIdException
+
+
+def invite_filter() -> dict[str, Any]:
+    return {
+        "presence": {"limit": 0, "types": []},
+        "account_data": {"limit": 0, "types": []},
+        "room": {
+            "state": {"types": ["m.room.join_rules"], "not_types": ["m.room.member"], "limit": 0},
+            "timeline": {"types": [], "limit": 0},
+            "account_data": {"limit": 0, "types": []},
+            "ephemeral": {"limit": 0, "types": []},
+        },
+        "request_id": str(uuid4()),
+    }
 
 
 def prompt_matrix_password(matrix_id: str) -> str:

@@ -5,10 +5,11 @@ from typing import Any, Dict, List, Optional, Union
 import aiohttp
 from aiofiles import open as aiofiles_open
 from aiofiles import os as aiofiles_os
-from fractal.matrix.utils import parse_matrix_id
+from fractal.matrix.utils import invite_filter, parse_matrix_id
 from nio import (
     AsyncClient,
     AsyncClientConfig,
+    InviteInfo,
     JoinError,
     MessageDirection,
     RoomGetStateEventError,
@@ -16,6 +17,7 @@ from nio import (
     RoomMessagesError,
     RoomPutStateError,
     RoomSendResponse,
+    SyncError,
     TransferMonitor,
     UploadError,
 )
@@ -131,6 +133,23 @@ class FractalAsyncClient(AsyncClient):
             raise Exception(res.message)
 
         return None
+
+    async def get_room_invites(self) -> Dict[str, InviteInfo]:
+        """
+        Returns a dictionary of room ids to invite info.
+
+        TODO: Optionally support a custom invite filter.
+        Returns:
+            Dict[str, InviteInfo]: A dictionary of room ids to invite info.
+        """
+        # save previous next batch since sync will replace it.
+        prev_next_batch = self.next_batch
+        res = await self.sync(since=None, timeout=0, sync_filter=invite_filter())
+        if isinstance(res, SyncError):
+            raise Exception(res.message)
+        # restore previous next batch
+        self.next_batch = prev_next_batch
+        return res.rooms.invite
 
     async def join_room(self, room_id: str) -> None:
         """
