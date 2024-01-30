@@ -115,6 +115,9 @@ class FractalAsyncClient(AsyncClient):
         if not admin:
             raise Exception("FIXME: Only admin invites are supported for now.")
 
+        if not user_id.islower():
+            raise Exception("Matrix ids must be lowercase.")
+
         logger.info(f"Sending invite to {room_id} to user ({user_id})")
         res = await self.room_invite(room_id, user_id)
         if isinstance(res, RoomInviteError):
