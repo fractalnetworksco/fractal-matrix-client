@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 import aiohttp
 from aiofiles import open as aiofiles_open
@@ -346,18 +346,22 @@ class MatrixClient:
         await self.client.close()
 
 
-async def get_homeserver_for_matrix_id(matrix_id: str) -> str:
+async def get_homeserver_for_matrix_id(matrix_id: str) -> Tuple[str, bool]:
     """Lookup the homeserver url associated with a Matrix ID"""
     # FIXME: just because matrix_id has localhost, doesn't necessarily mean
     # that the homeserver is running on localhost. Could be synapse:8008, etc.
     if "localhost" in matrix_id:
-        return "http://localhost:8008"
-    _, homeserver_host = parse_matrix_id(matrix_id)
-    homeserver_url = f"https://{homeserver_host}"
+        homeserver_url = "http://localhost:8008"
+    else:
+        _, homeserver_host = parse_matrix_id(matrix_id)
+        homeserver_url = f"https://{homeserver_host}"
     async with MatrixClient(homeserver_url) as client:
         res = await client.discovery_info()
     if not res.transport_response.ok:  # type: ignore
         if res.transport_response.reason == "Not Found":  # type: ignore
             raise WellKnownNotFoundException()  # type: ignore
         raise UnknownDiscoveryInfoException(res.transport_response.reason)  # type: ignore
-    return res.homeserver_url  # type: ignore
+    if res.homeserver_url == homeserver_url: # type: ignore
+        return res.homeserver_url, False # type: ignore
+    else:
+        return res.homeserver_url, True  # type: ignore
