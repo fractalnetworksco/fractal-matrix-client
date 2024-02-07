@@ -358,13 +358,14 @@ async def get_homeserver_for_matrix_id(matrix_id: str) -> Tuple[str, bool]:
     else:
         _, homeserver_host = parse_matrix_id(matrix_id)
         homeserver_url = f"https://{homeserver_host}"
+    parsed_homeserver = urlparse(homeserver_url).netloc.split(':')[0]
     async with MatrixClient(homeserver_url) as client:
         res = await client.discovery_info()
     if isinstance(res, DiscoveryInfoError):
         if res.transport_response.reason == "Not Found":  # type: ignore
             raise WellKnownNotFoundException()  
         raise UnknownDiscoveryInfoException(res.transport_response.reason)  # type: ignore
-    if urlparse(homeserver_url).netloc in urlparse(res.homeserver_url).netloc: 
+    if parsed_homeserver in urlparse(res.homeserver_url).netloc: 
         return res.homeserver_url, False 
     else:
         return res.homeserver_url, True  
