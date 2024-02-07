@@ -1,0 +1,18 @@
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  $MATRIX_SERVER_NAME;
+
+    # pass all traffic to synapse
+    location / {
+        proxy_pass "http://$MATRIX_INTERNAL_SERVER_URI";
+        proxy_set_header Host            $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+
+    location /.well-known/matrix/client {
+        add_header Access-Control-Allow-Origin *;
+        add_header Content-Type application/json;
+        return 200 '{"m.homeserver": {"base_url": "$MATRIX_SERVER_FQDN"}}';
+    }
+}

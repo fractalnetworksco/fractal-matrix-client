@@ -1,0 +1,13 @@
+[report]
+include_namespace_packages = True
+skip_empty = True
+
+[run]
+omit =
+    **/tests/*
+    **/build/*
+    **/setup.py
+    **/dev/*
+    homeserver/app/*
+    **/cache/manage.py
+    **/migrations/*
