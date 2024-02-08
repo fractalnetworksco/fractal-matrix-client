@@ -1,6 +1,6 @@
 import re
 from getpass import getpass
-from typing import Any, Tuple
+from typing import Any, Optional, Tuple
 from uuid import uuid4
 
 from fractal.matrix.exceptions import InvalidMatrixIdException
@@ -20,7 +20,7 @@ def invite_filter() -> dict[str, Any]:
     }
 
 
-def prompt_matrix_password(matrix_id: str) -> str:
+def prompt_matrix_password(matrix_id: str, homeserver_url: Optional[str] = None) -> str:
     """
     Prompts for Matrix password.
 
@@ -29,7 +29,10 @@ def prompt_matrix_password(matrix_id: str) -> str:
 
     TODO: This should instead direct to a homeserver login page.
     """
-    print(f"Login with Matrix ID ({matrix_id}) to continue")
+    if homeserver_url:
+        print(f"Login with Matrix ID ({matrix_id}) to sign in to {homeserver_url}")
+    else:
+        print(f"Login with Matrix ID ({matrix_id}) to continue")
     try:
         password = getpass(f"{matrix_id}'s password: ")
         return password
