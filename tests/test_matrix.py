@@ -54,6 +54,16 @@ async def test_decorator_async_decorator():
     await test("foo", "bar")  # type: ignore
 
 
+@pytest.mark.skip(reason="Figure out how to remove homeserver")
+async def test_decorator_async_decorator_no_home_server():
+    environment = os.environ.copy()
+    del environment["MATRIX_HOMESERVER_URL"]
+    with patch.dict(os.environ, environment):
+        del os.environ["MATRIX_HOMESERVER_URL"]
+        async with MatrixClient() as client:
+            pass
+
+
 @patch("fractal.matrix.async_client.FractalAsyncClient")
 async def test_get_matrix_homeserver_url_for_matrix_id(AsyncClientMock):
     client_instance = AsyncClientMock.return_value
