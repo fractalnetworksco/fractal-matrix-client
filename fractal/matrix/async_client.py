@@ -1,8 +1,7 @@
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
-
 
 import aiohttp
 from aiofiles import open as aiofiles_open
@@ -11,6 +10,7 @@ from fractal.matrix.utils import invite_filter, parse_matrix_id
 from nio import (
     AsyncClient,
     AsyncClientConfig,
+    DiscoveryInfoError,
     InviteInfo,
     JoinError,
     MessageDirection,
@@ -22,7 +22,6 @@ from nio import (
     SyncError,
     TransferMonitor,
     UploadError,
-    DiscoveryInfoError, 
 )
 from nio.responses import RegisterErrorResponse
 
@@ -233,6 +232,8 @@ class FractalAsyncClient(AsyncClient):
             registration_token (str): The registration token to use.
             device_name (str): The device name to register. Defaults to "".
             disable_ratelimiting (bool): Whether or not to disable rate limiting for the user. Defaults to True.
+
+        Returns: Access Token for registered user
         """
         matrix_id = matrix_id.lower()
         username = parse_matrix_id(matrix_id)[0]
@@ -354,18 +355,18 @@ async def get_homeserver_for_matrix_id(matrix_id: str) -> Tuple[str, bool]:
     # FIXME: just because matrix_id has localhost, doesn't necessarily mean
     # that the homeserver is running on localhost. Could be synapse:8008, etc.
     if "localhost" in matrix_id:
-        homeserver_url = os.environ.get('MATRIX_HOMESERVER_URL', "http://localhost:8008")
+        homeserver_url = os.environ.get("MATRIX_HOMESERVER_URL", "http://localhost:8008")
     else:
         _, homeserver_host = parse_matrix_id(matrix_id)
         homeserver_url = f"https://{homeserver_host}"
-    parsed_homeserver = urlparse(homeserver_url).netloc.split(':')[0]
+    parsed_homeserver = urlparse(homeserver_url).netloc.split(":")[0]
     async with MatrixClient(homeserver_url) as client:
         res = await client.discovery_info()
     if isinstance(res, DiscoveryInfoError):
         if res.transport_response.reason == "Not Found":  # type: ignore
-            raise WellKnownNotFoundException()  
+            raise WellKnownNotFoundException()
         raise UnknownDiscoveryInfoException(res.transport_response.reason)  # type: ignore
-    if parsed_homeserver in urlparse(res.homeserver_url).netloc: 
-        return res.homeserver_url, False 
+    if parsed_homeserver in urlparse(res.homeserver_url).netloc:
+        return res.homeserver_url, False
     else:
-        return res.homeserver_url, True  
+        return res.homeserver_url, True
