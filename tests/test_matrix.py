@@ -1,14 +1,23 @@
 import os
+from copy import deepcopy
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fractal.matrix import MatrixClient, get_homeserver_for_matrix_id
 from fractal.matrix.async_client import FractalAsyncClient
 from fractal.matrix.exceptions import (
+    GetLatestSyncTokenError,
     UnknownDiscoveryInfoException,
     WellKnownNotFoundException,
 )
-from nio import AsyncClient, DiscoveryInfoError, DiscoveryInfoResponse, RegisterResponse
+from nio import (
+    AsyncClient,
+    DiscoveryInfoError,
+    DiscoveryInfoResponse,
+    RegisterResponse,
+    RoomMessagesError,
+    RoomMessagesResponse,
+)
 from nio.http import TransportResponse
 
 
@@ -54,14 +63,56 @@ async def test_decorator_async_decorator():
     await test("foo", "bar")  # type: ignore
 
 
-@pytest.mark.skip(reason="Figure out how to remove homeserver")
-async def test_decorator_async_decorator_no_home_server():
-    environment = os.environ.copy()
-    del environment["MATRIX_HOMESERVER_URL"]
-    with patch.dict(os.environ, environment):
-        del os.environ["MATRIX_HOMESERVER_URL"]
-        async with MatrixClient() as client:
-            pass
+async def test_decorator_async_decorator_no_home_server_and_no_matrix_id_raises_error():
+    environment = deepcopy(os.environ)
+    environment.pop("MATRIX_HOMESERVER_URL", None)
+    environment.pop("MATRIX_ID", None)
+    with patch.dict(os.environ, environment, clear=True):
+        with pytest.raises(KeyError) as e:
+            async with MatrixClient() as client:
+                assert client.homeserver == None
+
+
+async def test_context_manager_no_home_server():
+    environment = deepcopy(os.environ)
+    environment.pop("MATRIX_HOMESERVER_URL", None)
+    matrix_id = "@user:homeserver.org"
+    with patch.dict(os.environ, environment, clear=True):
+        with patch(
+            "fractal.matrix.async_client.get_homeserver_for_matrix_id",
+            new=AsyncMock(return_value=("https://homeserver.org", False)),
+        ) as mock_get_homeserver:
+            async with MatrixClient(matrix_id=matrix_id) as client:
+                assert client.homeserver == "https://homeserver.org"
+
+
+async def test_context_manager_no_access_token():
+    environment = deepcopy(os.environ)
+    environment.pop("MATRIX_HOMESERVER_URL", None)
+    environment.pop("MATRIX_ACCESS_TOKEN")
+    matrix_id = "@user:homeserver.org"
+    with patch.dict(os.environ, environment, clear=True):
+        with patch(
+            "fractal.matrix.async_client.get_homeserver_for_matrix_id",
+            new=AsyncMock(return_value=("https://homeserver.org", False)),
+        ) as mock_get_homeserver:
+            async with MatrixClient(matrix_id=matrix_id) as client:
+                assert client.access_token == None
+                assert client.user == matrix_id
+
+
+async def test_context_manager_testing_access_token():
+    environment = deepcopy(os.environ)
+    environment.pop("MATRIX_HOMESERVER_URL", None)
+    environment.pop("MATRIX_ACCESS_TOKEN")
+    matrix_id = "@user:homeserver.org"
+    with patch.dict(os.environ, environment, clear=True):
+        with patch(
+            "fractal.matrix.async_client.get_homeserver_for_matrix_id",
+            new=AsyncMock(return_value=("https://homeserver.org", False)),
+        ) as mock_get_homeserver:
+            async with MatrixClient(matrix_id=matrix_id, access_token="test_token") as client:
+                assert client.user == ""
 
 
 @patch("fractal.matrix.async_client.FractalAsyncClient")
@@ -138,3 +189,62 @@ async def test_register_with_token_works():
     register_with_token_response = RegisterResponse(matrix_id, "devid", access_token)
     client.register_with_token = AsyncMock(return_value=register_with_token_response)
     token = await client.register_with_token(matrix_id, password, registration_token)
+
+
+async def test_get_latest_sync_token_no_room_id():
+    client = FractalAsyncClient()
+    assert client.room_id == None
+    with pytest.raises(GetLatestSyncTokenError) as e:
+        await client.get_latest_sync_token()
+    assert "No room id provided" in str(e.value)
+
+
+async def test_get_latest_sync_token_successful_message():
+    sample_room_id = "sample_id"
+    client = FractalAsyncClient(room_id=sample_room_id)
+    mock_response = RoomMessagesResponse(
+        room_id=sample_room_id, chunk=[], start="mock_sync_token"
+    )
+    client.room_messages = AsyncMock(return_value=mock_response)
+    sync_token = await client.get_latest_sync_token()
+    assert sync_token == "mock_sync_token"
+
+
+async def test_get_latest_sync_token_message_error():
+    sample_room_id = "sample_id"
+    client = FractalAsyncClient(room_id=sample_room_id)
+    mock_response = RoomMessagesError("Room Message Error")
+    client.room_messages = AsyncMock(return_value=mock_response)
+    with pytest.raises(GetLatestSyncTokenError) as e:
+        await client.get_latest_sync_token()
+    assert "Room Message Error" in str(e.value)
+
+
+async def test_invite_if_not_admin():
+    sample_user_id = "sample_user"
+    sample_room_id = "sample_id"
+    client = FractalAsyncClient()
+    with pytest.raises(Exception) as e:
+        await client.invite(user_id=sample_user_id, room_id=sample_room_id, admin=False)
+    assert "FIXME: Only admin invites are supported for now." in str(e.value)
+
+
+async def test_invite_all_lower_case_failed():
+    sample_user_id = "SaMplE_uSer"
+    sample_room_id = "sample_id"
+    client = FractalAsyncClient()
+    with pytest.raises(Exception) as e:
+        await client.invite(user_id=sample_user_id, room_id=sample_room_id, admin=True)
+    assert "Matrix ids must be lowercase." in str(e.value)
+
+
+async def test_invite_send_invite():
+    sample_user_id = "sample_user"
+    sample_room_id = "sample_id"
+    client = FractalAsyncClient()
+    # with patch(
+    # "fractal.matrix.async_client.FractalAsyncClient.invite", new=AsyncMock()
+    # ) as mock_invite:
+    with patch("fractal.matrix.async_client.logger", new=AsyncMock()) as mock_logger:
+        await client.invite(user_id=sample_user_id, room_id=sample_room_id, admin=True)
+    mock_logger.error.assert_called_once()
