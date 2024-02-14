@@ -127,8 +127,11 @@ class FractalAsyncClient(AsyncClient):
 
         # get power levels
         res = await self.room_get_state_event(room_id, "m.room.power_levels")
-        if isinstance(res, RoomGetStateEventError):
-            raise Exception(res.message)
+        if isinstance(res, RoomGetStateEventError) or "errcode" in res.content:
+            if hasattr(res, "message"):
+                raise Exception(res.message)
+            else:
+                raise Exception(res.content["error"])
 
         # set user as admin
         power_levels = res.content
