@@ -153,6 +153,7 @@ class FractalAsyncClient(AsyncClient):
         # save previous next batch since sync will replace it.
         prev_next_batch = self.next_batch
         res = await self.sync(since=None, timeout=0, sync_filter=invite_filter())
+        print(f"RES IS ============== {res}")
         if isinstance(res, SyncError):
             raise Exception(res.message)
         # restore previous next batch
