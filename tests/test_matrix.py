@@ -234,11 +234,18 @@ async def test_join_room_join_error():
     assert "Failed to join room" in str(e.value)
 
 
-@pytest.mark.skip("Don't know how to use aiohttp")
-async def test_disable_ratelimiting_url_creation():
+async def test_disable_ratelimiting_url_creation(mock_aiohttp_client):
     client = FractalAsyncClient()
     matrix_id = "sample_matrix_id"
+    request_url = f"{client.homeserver}/_synapse/admin/v1/users/{matrix_id}/override_ratelimit"
+    mock_aiohttp_client.post(request_url, status=200)
     await client.disable_ratelimiting(matrix_id=matrix_id)
+    mock_aiohttp_client.assert_called_with(
+        request_url,
+        method="POST",
+        headers={"Authorization": f"Bearer {client.access_token}"},
+        json={},
+    )
 
 
 @pytest.mark.skip(
