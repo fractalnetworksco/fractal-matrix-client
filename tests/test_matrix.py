@@ -234,7 +234,7 @@ async def test_join_room_join_error():
     assert "Failed to join room" in str(e.value)
 
 
-async def test_disable_ratelimiting_url_creation(mock_aiohttp_client):
+async def test_disable_ratelimiting_post_mock_correct(mock_aiohttp_client):
     client = FractalAsyncClient()
     matrix_id = "sample_matrix_id"
     request_url = f"{client.homeserver}/_synapse/admin/v1/users/{matrix_id}/override_ratelimit"
@@ -248,32 +248,79 @@ async def test_disable_ratelimiting_url_creation(mock_aiohttp_client):
     )
 
 
-@pytest.mark.skip(
-    "Type error, either lack of knowledge of aiohttp or bug in disable_ratelimiting"
-)
-async def test_disable_ratelimiting_logger():
+async def test_disable_ratelimiting_override_error(mock_aiohttp_client):
     client = FractalAsyncClient()
     matrix_id = "sample_matrix_id"
-    url = f"https://_synapse/admin/v1/users/{matrix_id}/override_ratelimit"
-    mock_post = AsyncMock(return_value=MagicMock(ok=True, text=AsyncMock(return_value="OK")))
-    with patch(
-        "fractal.matrix.async_client.aiohttp.ClientSession.post", new=mock_post
-    ) as mock_post_call:
-        with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
-            await client.disable_ratelimiting(matrix_id=matrix_id)
-            mock_logger.info.assert_called_once_with("Rate limit override successful.")
-            mock_post_call.assert_called_once_with(
-                url, json={}, headers={"Authorization": f"Bearer {client.access_token}"}
-            )
+    request_url = f"{client.homeserver}/_synapse/admin/v1/users/{matrix_id}/override_ratelimit"
+    status = 500
+    mock_aiohttp_client.post(request_url, status=status)
+    with pytest.raises(Exception) as e:
+        await client.disable_ratelimiting(matrix_id=matrix_id)
+    assert f"Failed to override rate limit. Error Response status {status}: " in str(e.value)
 
 
-@pytest.mark.skip("come back to")
+async def test_disable_ratelimiting_logger(mock_aiohttp_client):
+    client = FractalAsyncClient()
+    matrix_id = "sample_matrix_id"
+    request_url = f"{client.homeserver}/_synapse/admin/v1/users/{matrix_id}/override_ratelimit"
+    mock_aiohttp_client.post(request_url, status=200)
+    with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
+        await client.disable_ratelimiting(matrix_id=matrix_id)
+        mock_logger.info.assert_called_with("Rate limit override successful.")
+    mock_aiohttp_client.assert_called_with(
+        request_url,
+        method="POST",
+        headers={"Authorization": f"Bearer {client.access_token}"},
+        json={},
+    )
+
+
+async def test_generate_registration_token_post_mock(mock_aiohttp_client):
+    client = FractalAsyncClient()
+    request_url = f"{client.homeserver}/_synapse/admin/v1/registration_tokens/new"
+    token_value = "sample_token"
+    expected_payload = {"token": token_value}
+    mock_aiohttp_client.post(request_url, status=200, payload=expected_payload)
+    token = await client.generate_registration_token()
+    assert isinstance(token, str)
+    mock_aiohttp_client.assert_called_once_with(
+        request_url,
+        method="POST",
+        headers={"Authorization": f"Bearer {client.access_token}"},
+        json={},
+    )
+
+
+async def test_generate_registration_token_override_error(mock_aiohttp_client):
+    client = FractalAsyncClient()
+    request_url = f"{client.homeserver}/_synapse/admin/v1/registration_tokens/new"
+    status = 500
+    mock_aiohttp_client.post(request_url, status=status)
+    with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
+        with pytest.raises(Exception):
+            await client.generate_registration_token()
+        mock_logger.error.assert_called_with(
+            f"Failed to override rate limit. Error Response status {status}: "
+        )
+
+
 async def test_register_with_token():
     client = FractalAsyncClient()
     matrix_id = "sample_matrix_id"
     password = "sample_password"
     registration_token = "sample_registration_token"
-    client.register_with_token = AsyncMock()
+    # LEAVING FOR DAY HERE: FIGURE OUT WHY PATCH IS WRONG AND CODE ISNT BEING TESTED
+    with patch.object(
+        client, "register_with_token", new_callable=AsyncMock
+    ) as mock_register_with_token:
+        mock_register_with_token.return_value = RegisterResponse(
+            user_id="sample_id", device_id="sample_device", access_token="sample_access_token"
+        )
+        access_token = await client.register_with_token(
+            matrix_id=matrix_id, password=password, registration_token=registration_token
+        )
+        mock_register_with_token.assert_called_once()
+        assert access_token == "sample_access_token"
 
 
 async def test_upload_file_logger():
