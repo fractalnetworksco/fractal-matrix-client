@@ -117,8 +117,7 @@ class FractalAsyncClient(AsyncClient):
         if not admin:
             raise Exception("FIXME: Only admin invites are supported for now.")
 
-        # check if user_id is lowercase
-        if not user_id.split("@")[1].islower():
+        if not user_id.islower():
             raise Exception("Matrix ids must be lowercase.")
 
         logger.info(f"Sending invite to {room_id} to user ({user_id})")
@@ -251,7 +250,7 @@ class FractalAsyncClient(AsyncClient):
         # register will replace the access token that's on the client with the one returned
         # from a successful registration. We want to keep the original access token.
         self.access_token = access_token
-
+        print(f"ACCESS TOKEN IS ================ {self.access_token}")
         if disable_ratelimiting:
             await self.disable_ratelimiting(matrix_id)
 
