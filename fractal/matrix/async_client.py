@@ -117,6 +117,9 @@ class FractalAsyncClient(AsyncClient):
         if not admin:
             raise Exception("FIXME: Only admin invites are supported for now.")
 
+        # ensure that the provided matrix_id is a valid matrix id.
+        parse_matrix_id(user_id)
+
         # check if user_id is lowercase
         if not user_id.split("@")[1].islower():
             raise Exception("Matrix ids must be lowercase.")
@@ -270,6 +273,7 @@ class FractalAsyncClient(AsyncClient):
         Args:
             file_path (str): The path to the file to upload.
             monitor (Optional[TransferMonitor]): A transfer monitor to use. Defaults to None.
+            filename (Optional[str]): Uploads the file using this file name. Defaults to None.
 
         Returns:
             str: The content uri of the uploaded file.

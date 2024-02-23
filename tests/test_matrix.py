@@ -19,6 +19,9 @@ from nio import (
     JoinError,
     RegisterResponse,
     SyncError,
+    TransferMonitor,
+    UploadError,
+    UploadResponse,
 )
 from nio.http import TransportResponse
 
@@ -269,10 +272,58 @@ async def test_register_with_token():
     client.register_with_token = AsyncMock()
 
 
-async def test_upload_file_logger():
+async def test_upload_file_success_no_monitor(mock_async_context_manager):
     client = FractalAsyncClient()
+    success = (UploadResponse("http://Someurl"), {})
+    client.upload = AsyncMock(return_value=success)
     file_path = "sample/file/path"
     # create mock to use fake file path for
-    with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
-        await client.upload_file(file_path=file_path)
-        mock_logger.info.assert_called_once_with(f"Uploading file: {file_path}")
+    with patch("fractal.matrix.async_client.aiofiles_os.stat", new=AsyncMock()) as mock_file_stat:
+        with patch(
+            "fractal.matrix.async_client.aiofiles_open",
+            new=MagicMock(spec=mock_async_context_manager),
+        ) as mock_file_open:
+            with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
+                content_uri = await client.upload_file(file_path=file_path)
+                assert content_uri == "http://Someurl"
+                mock_logger.info.assert_called_once_with(f"Uploading file: {file_path}")
+                client.upload.assert_called()
+                assert "monitor" not in client.upload.call_args.kwargs
+
+
+async def test_upload_file_uploaderror(mock_async_context_manager):
+    client = FractalAsyncClient()
+    failure = (UploadError("Failed to upload file."), {})
+    client.upload = AsyncMock(return_value=failure)
+    file_path = "sample/file/path"
+    # create mock to use fake file path for
+    with patch("fractal.matrix.async_client.aiofiles_os.stat", new=AsyncMock()) as mock_file_stat:
+        with patch(
+            "fractal.matrix.async_client.aiofiles_open",
+            new=MagicMock(spec=mock_async_context_manager),
+        ) as mock_file_open:
+            with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
+                with pytest.raises(Exception) as e:
+                    await client.upload_file(file_path=file_path)
+                assert "Failed to upload file." in str(e.value)
+
+
+async def test_upload_file_monitor_success(mock_async_context_manager):
+    client = FractalAsyncClient()
+    success = (UploadResponse("http://Someurl"), {})
+    client.upload = AsyncMock(return_value=success)
+    file_path = "sample/file/path"
+    # create mock to use fake file path for
+    with patch("fractal.matrix.async_client.aiofiles_os.stat", new=AsyncMock()) as mock_file_stat:
+        with patch(
+            "fractal.matrix.async_client.aiofiles_open",
+            new=MagicMock(spec=mock_async_context_manager),
+        ) as mock_file_open:
+            with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
+                trans_monitor = TransferMonitor(total_size=10)
+                content_uri = await client.upload_file(file_path=file_path, monitor=trans_monitor)
+                assert content_uri == "http://Someurl"
+                mock_logger.info.assert_called_once_with(f"Uploading file: {file_path}")
+                assert "http://Someurl" in content_uri
+                client.upload.assert_called()
+                assert client.upload.call_args.kwargs["monitor"].total_size == 10

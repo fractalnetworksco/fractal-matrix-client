@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fractal.matrix.async_client import FractalAsyncClient
+from fractal.matrix.exceptions import InvalidMatrixIdException
 from nio import (
     RoomGetStateEventError,
     RoomGetStateEventResponse,
@@ -59,9 +60,9 @@ async def test_invite_raise_exception_for_userID():
     sample_user_id = "sample_user:sample_domain"
     sample_room_id = "sample_id"
     client = FractalAsyncClient()
-    with pytest.raises(Exception) as e:
+    with pytest.raises(InvalidMatrixIdException) as e:
         await client.invite(user_id=sample_user_id, room_id=sample_room_id, admin=True)
-    assert "Expected UserID string to start with" in str(e.value)
+    assert f"{sample_user_id} is not a valid Matrix ID." in str(e.value)
 
 
 async def test_invite_get_power_levels():
