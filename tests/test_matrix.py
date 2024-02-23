@@ -273,7 +273,7 @@ async def test_register_with_token():
     client.register_with_token = AsyncMock()
 
 
-async def test_upload_file_logger(mock_async_context_manager):
+async def test_upload_file_success_no_monitor(mock_async_context_manager):
     client = FractalAsyncClient()
     success = (UploadResponse("http://Someurl"), {})
     client.upload = AsyncMock(return_value=success)
@@ -289,6 +289,7 @@ async def test_upload_file_logger(mock_async_context_manager):
                 assert content_uri == "http://Someurl"
                 mock_logger.info.assert_called_once_with(f"Uploading file: {file_path}")
                 client.upload.assert_called()
+                assert "monitor" not in client.upload.call_args.kwargs
 
 
 async def test_upload_file_uploaderror(mock_async_context_manager):
@@ -325,3 +326,5 @@ async def test_upload_file_monitor_success(mock_async_context_manager):
                 assert content_uri == "http://Someurl"
                 mock_logger.info.assert_called_once_with(f"Uploading file: {file_path}")
                 assert "http://Someurl" in content_uri
+                client.upload.assert_called()
+                assert client.upload.call_args.kwargs["monitor"].total_size == 10
