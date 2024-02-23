@@ -117,6 +117,7 @@ class FractalAsyncClient(AsyncClient):
         if not admin:
             raise Exception("FIXME: Only admin invites are supported for now.")
 
+        # ensure that the provided matrix_id is a valid matrix id.
         parse_matrix_id(user_id)
 
         # check if user_id is lowercase
