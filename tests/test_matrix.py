@@ -1,7 +1,6 @@
 import asyncio
 import os
 from copy import deepcopy
-#from os import stat_result
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
