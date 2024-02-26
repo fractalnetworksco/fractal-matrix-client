@@ -5,6 +5,7 @@ from fractal.matrix.async_client import FractalAsyncClient
 from nio import (
     RoomGetStateEventError,
     RoomGetStateEventResponse,
+    RoomInviteError,
     RoomInviteResponse,
     RoomPutStateError,
     RoomPutStateResponse,
@@ -59,6 +60,9 @@ async def test_invite_raise_exception_for_userID():
     sample_user_id = "sample_user:sample_domain"
     sample_room_id = "sample_id"
     client = FractalAsyncClient()
+    client.room_invite = AsyncMock(
+        return_value=RoomInviteError("Expected UserID string to start with")
+    )
     with pytest.raises(Exception) as e:
         await client.invite(user_id=sample_user_id, room_id=sample_room_id, admin=True)
     assert "Expected UserID string to start with" in str(e.value)
