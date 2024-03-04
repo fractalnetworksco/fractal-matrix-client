@@ -21,6 +21,7 @@ from nio import (
     DiscoveryInfoResponse,
     InviteInfo,
     JoinError,
+    JoinResponse,
     PresenceEvent,
     RegisterResponse,
     RoomInfo,
@@ -262,6 +263,16 @@ async def test_join_room_logger():
     with patch("fractal.matrix.async_client.logger", new=MagicMock()) as mock_logger:
         await client.join_room(room_id=room_id)
         mock_logger.info.assert_called_once_with(f"Joining room: {room_id}")
+
+
+async def test_join_room_join_response():
+    client = FractalAsyncClient()
+    room_id = "sample_room_id"
+    join_response = JoinResponse(room_id=room_id)
+    client.join = AsyncMock(return_value=join_response)
+    await client.join_room(room_id=room_id)
+    client.join.assert_called_once_with(room_id)
+    assert await client.join_room(room_id=room_id) is None
 
 
 async def test_join_room_join_error():

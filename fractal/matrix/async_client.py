@@ -172,6 +172,7 @@ class FractalAsyncClient(AsyncClient):
         """
         logger.info(f"Joining room: {room_id}")
         res = await self.join(room_id)
+        print(f"RES IS ============== {res}")
         if isinstance(res, JoinError):
             raise Exception(res.message)
         return None
@@ -254,7 +255,6 @@ class FractalAsyncClient(AsyncClient):
         # register will replace the access token that's on the client with the one returned
         # from a successful registration. We want to keep the original access token.
         self.access_token = access_token
-        print(f"ACCESS TOKEN IS ================ {self.access_token}")
         if disable_ratelimiting:
             await self.disable_ratelimiting(matrix_id)
 
