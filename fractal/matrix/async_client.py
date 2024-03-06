@@ -172,7 +172,6 @@ class FractalAsyncClient(AsyncClient):
         """
         logger.info(f"Joining room: {room_id}")
         res = await self.join(room_id)
-        print(f"RES IS ============== {res}")
         if isinstance(res, JoinError):
             raise Exception(res.message)
         return None
