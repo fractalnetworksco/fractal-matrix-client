@@ -157,7 +157,6 @@ class FractalAsyncClient(AsyncClient):
         # save previous next batch since sync will replace it.
         prev_next_batch = self.next_batch
         res = await self.sync(since=None, timeout=0, sync_filter=invite_filter())
-        print(f"RES IS ============== {res}")
         if isinstance(res, SyncError):
             raise Exception(res.message)
         # restore previous next batch
@@ -255,7 +254,6 @@ class FractalAsyncClient(AsyncClient):
         # register will replace the access token that's on the client with the one returned
         # from a successful registration. We want to keep the original access token.
         self.access_token = access_token
-
         if disable_ratelimiting:
             await self.disable_ratelimiting(matrix_id)
 

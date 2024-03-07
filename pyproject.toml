@@ -22,9 +22,9 @@ pytest-mock = { version = "^3.11.1", optional = true }
 aioresponses = {version = "^0.7.6", optional = true}
 ipython = { version = "^8.17.2", optional = true }
 
-
 [tool.poetry.extras]
-dev = ["pytest-django", "pytest", "pytest-cov", "pytest-mock", "pytest-asyncio", "ipython"]
+dev = ["pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "ipython", "pytest-benchmark", "aioresponses"]
+
 
 [build-system]
 requires = ["poetry-core"]
