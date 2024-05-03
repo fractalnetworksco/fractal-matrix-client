@@ -14,6 +14,7 @@ from nio import (
     InviteInfo,
     JoinError,
     MessageDirection,
+    ProfileSetDisplayNameError,
     RoomGetStateEventError,
     RoomInviteError,
     RoomMessagesError,
@@ -288,6 +289,15 @@ class FractalAsyncClient(AsyncClient):
         if isinstance(res, UploadError):
             raise Exception("Failed to upload file.")
         return res.content_uri
+
+    async def set_displayname(self, displayname: str) -> None:
+        # ensure that the provided displayname is not empty as if it is, set_displayname will fail.
+        if not self.user_id:
+            await self.whoami()
+        res = await super().set_displayname(displayname)
+        if isinstance(res, ProfileSetDisplayNameError):
+            raise Exception(res.message)
+        return None
 
 
 class MatrixClient:
