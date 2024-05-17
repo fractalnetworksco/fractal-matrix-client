@@ -245,18 +245,11 @@ class FractalAsyncClient(AsyncClient):
         """
         matrix_id = matrix_id.lower()
         username = parse_matrix_id(matrix_id)[0]
-        access_token = self.access_token
         res = await super().register_with_token(
             username, password, registration_token, device_name=device_name
         )
         if isinstance(res, RegisterErrorResponse):
             raise Exception(res.message)
-
-        # register will replace the access token that's on the client with the one returned
-        # from a successful registration. We want to keep the original access token.
-        self.access_token = access_token
-        if disable_ratelimiting:
-            await self.disable_ratelimiting(matrix_id)
 
         return res.access_token
 
