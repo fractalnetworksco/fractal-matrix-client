@@ -345,7 +345,6 @@ class MatrixClient:
 
     async def __aenter__(self):
         if not self.homeserver_url:
-            print(get_homeserver_for_matrix_id)
             self.homeserver_url, _ = await get_homeserver_for_matrix_id(self.matrix_id)
         self.client = FractalAsyncClient(
             self.homeserver_url,
