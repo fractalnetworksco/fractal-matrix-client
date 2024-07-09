@@ -201,25 +201,52 @@ class FractalAsyncClient(AsyncClient):
                         f"Failed to override rate limit. Error Response status {response.status}: {txt}"
                     )
 
-    async def generate_registration_token(self) -> str:
+    async def generate_registration_token(self, uses_allowed: Optional[int] = None) -> str:
         """
+        Generate a registration token. Only available to Synapse admins.
+
         Args:
-            matrix_id (str): The matrix id to disable rate limiting for.
+            uses_allowed (Optional[int]): The number of uses the token can be used to complete registration. Defaults to None.
         """
         url = f"{self.homeserver}/_synapse/admin/v1/registration_tokens/new"
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
+        request_data = {"uses_allowed": uses_allowed}
         async with aiohttp.ClientSession() as session:
-            # TODO: Maybe not completely disable rate limiting?
-            # what is optimial for Fractal Database?
-            async with session.post(url, json={}, headers=headers) as response:
+            async with session.post(url, json=request_data, headers=headers) as response:
                 if response.ok:
                     data = await response.json()
                     return data["token"]
                 else:
                     txt = await response.text()
                     logger.error(
-                        f"Failed to override rate limit. Error Response status {response.status}: {txt}"
+                        f"Failed to create registration token. Error Response status {response.status}: {txt}"
+                    )
+                    raise Exception()
+
+    async def update_registration_token(
+        self, token: str, uses_allowed: Optional[int] = None
+    ) -> str:
+        """
+        Update an existing registration token
+
+        Args:
+            token: The token to update.
+            uses_allowed (Optional[int]): The number of uses the token can be used to complete registration. Defaults to None.
+        """
+        url = f"{self.homeserver}/_synapse/admin/v1/registration_tokens/{token}"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+
+        request_data = {"uses_allowed": uses_allowed}
+        async with aiohttp.ClientSession() as session:
+            async with session.put(url, json=request_data, headers=headers) as response:
+                if response.ok:
+                    data = await response.json()
+                    return data["token"]
+                else:
+                    txt = await response.text()
+                    logger.error(
+                        f"Failed to update registration token. Error Response status {response.status}: {txt}"
                     )
                     raise Exception()
 
