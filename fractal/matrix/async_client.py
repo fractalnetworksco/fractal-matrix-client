@@ -319,6 +319,28 @@ class FractalAsyncClient(AsyncClient):
             raise Exception(res.message)
         return None
 
+    async def synapse_admin_make_user_admin(self, matrix_id: str) -> None:
+        """
+        Make a user an admin on the homeserver. Assumes that you are an admin to
+        the homeserver.
+
+        Args:
+            matrix_id: The matrix ID of the user to make an admin.
+        """
+        url = f"{self.homeserver}/_synapse/admin/v1/users/{matrix_id}/admin"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+
+        request_data = {"admin": True}
+        async with aiohttp.ClientSession() as session:
+            async with session.put(url, json=request_data, headers=headers) as response:
+                if not response.ok:
+                    txt = await response.text()
+                    logger.error(
+                        f"Failed to update registration token. Error Response status {response.status}: {txt}"
+                    )
+                    raise Exception(f"Failed to update registration token. Error Response status {response.status}: {txt}")
+        return None
+
 
 class MatrixClient:
     """
