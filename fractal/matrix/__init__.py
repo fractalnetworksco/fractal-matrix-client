@@ -2,6 +2,7 @@ import logging
 import os
 from typing import Optional
 
+from fractal.matrix.admin_client import MatrixAdminClient
 from fractal.matrix.async_client import (
     FractalAsyncClient,
     MatrixClient,
