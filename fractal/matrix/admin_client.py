@@ -3,6 +3,7 @@ import secrets
 from typing import Tuple
 
 import requests
+from asgiref.sync import async_to_sync
 
 
 class MatrixAdminClient:
@@ -51,7 +52,7 @@ class MatrixAdminClient:
         deactivated=False,
         user_type=None,
         locked=False,
-    ) -> Tuple[str, str]:
+    ) -> None:
         """
         Create or modify a user account using the Synapse Admin API.
 
@@ -105,11 +106,16 @@ class MatrixAdminClient:
         body = {k: v for k, v in body.items() if v is not None}
 
         # Make the API request
-        response = self.do_request("PUT", endpoint, body)
+        # TODO make me async
+        self.do_request("PUT", endpoint, body)
 
+    async def alogin(self, user_id, password):
         from fractal.matrix import MatrixClient
 
         async with MatrixClient(self.homeserver_url) as client:
             client.user = user_id
             result = await client.login(password)
-        return result.user_id, result.access_token
+            return result.user_id, result.access_token
+
+    def login(self, user_id, password):
+        return async_to_sync(self.alogin)(user_id, password)
