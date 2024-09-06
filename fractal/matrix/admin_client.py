@@ -4,6 +4,7 @@ from typing import Tuple
 
 import requests
 from asgiref.sync import async_to_sync
+from nio import LoginError
 
 
 class MatrixAdminClient:
@@ -115,6 +116,8 @@ class MatrixAdminClient:
         async with MatrixClient(self.homeserver_url) as client:
             client.user = user_id
             result = await client.login(password)
+            if isinstance(result, LoginError):
+                raise Exception(result)
             return result.user_id, result.access_token
 
     def login(self, user_id, password):
